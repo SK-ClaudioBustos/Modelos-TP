@@ -1,0 +1,11 @@
+{
+  "name": "modelos-tp-report",
+  "private": true,
+  "description": "Genera el informe .docx a partir de los resultados en artifacts/",
+  "scripts": {
+    "build": "node build_report.js"
+  },
+  "dependencies": {
+    "docx": "^9.0.0"
+  }
+}
