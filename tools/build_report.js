@@ -1,11 +1,15 @@
 const fs = require("fs");
+const path = require("path");
 const {
   Document, Packer, Paragraph, TextRun, HeadingLevel, AlignmentType,
   Table, TableRow, TableCell, WidthType, ShadingType, BorderStyle,
+  ImageRun,
 } = require("docx");
 
 const FONT = "Calibri";
 const W = 9360; // ancho util A4 con margenes de 1"
+const FIGURES_DIR = path.join(__dirname, "..", "artifacts", "figures");
+const MAX_IMAGE_WIDTH_PX = 600; // ancho util de pagina (~6.5" a 96dpi)
 
 function p(text, opts = {}) {
   return new Paragraph({
@@ -68,6 +72,40 @@ function caption(text) {
   });
 }
 
+// Lee ancho/alto desde el chunk IHDR (bytes 16-24), evita depender de una
+// libreria extra solo para leer las dimensiones del PNG.
+function pngDimensions(buffer) {
+  return { width: buffer.readUInt32BE(16), height: buffer.readUInt32BE(20) };
+}
+
+function figure(filename, altText, captionText) {
+  const filePath = path.join(FIGURES_DIR, filename);
+  if (!fs.existsSync(filePath)) {
+    throw new Error(
+      `Falta ${filePath}. Corre "python src/make_figures.py" (con los artifacts de CNN/RNN/gradientes ya generados) antes de armar el informe.`
+    );
+  }
+  const data = fs.readFileSync(filePath);
+  const { width, height } = pngDimensions(data);
+  const scale = Math.min(1, MAX_IMAGE_WIDTH_PX / width);
+
+  return [
+    new Paragraph({
+      alignment: AlignmentType.CENTER,
+      spacing: { before: 120, after: 40 },
+      children: [
+        new ImageRun({
+          type: "png",
+          data,
+          altText: { title: altText, description: altText, name: altText },
+          transformation: { width: Math.round(width * scale), height: Math.round(height * scale) },
+        }),
+      ],
+    }),
+    caption(captionText),
+  ];
+}
+
 const doc = new Document({
   styles: { default: { document: { run: { font: FONT, size: 19 } } } },
   sections: [{
@@ -125,6 +163,11 @@ const doc = new Document({
       ),
       caption("Tabla 2. Ablación de los mecanismos de regularización."),
       p("La variante sin regularización memoriza el conjunto de entrenamiento —alcanza 98,65 % de exactitud— mientras su rendimiento en validación cae 7,4 puntos porcentuales. La brecha se quintuplica, pasando de 0,0388 a 0,1994. Se trata de un régimen de varianza alta y sesgo bajo: capacidad suficiente, capacidad de generalización insuficiente. La comparación involucra 30 épocas y un pliegue frente a 60 épocas y cinco, pero la magnitud del efecto excede holgadamente esa diferencia de protocolo. Ninguna de las dos configuraciones muestra subajuste: el error de entrenamiento es bajo en ambas."),
+      ...figure(
+        "fig_curvas_cnn.png",
+        "Curvas de exactitud de entrenamiento y validación, con y sin regularización",
+        "Figura 1. Curvas de exactitud por época para la configuración regularizada (pliegue 3) y la variante sin regularización (pliegue 1). La brecha entre ambas curvas crece marcadamente en ausencia de los mecanismos de regularización."
+      ),
 
       h("3. Módulo RNN", HeadingLevel.HEADING_1),
       h("3.1. Formulación y partición cronológica", HeadingLevel.HEADING_2),
@@ -145,6 +188,11 @@ const doc = new Document({
       ),
       caption("Tabla 3. Atenuación del gradiente a lo largo de la ventana temporal. La memoria efectiva indica cuántos pasos conservan al menos el 1 % de la norma del paso más reciente."),
       p("La celda simple atenúa el gradiente 497 veces más que la GRU y 138 veces más que la LSTM, diferencias de dos y tres órdenes de magnitud que confirman cuantitativamente el análisis del BPTT. La memoria efectiva ordena las tres celdas en el mismo sentido: la SimpleRNN propaga señal útil durante poco más de un día, mientras la GRU alcanza el doble. La medición se realizó sobre redes entrenadas, de modo que refleja la interacción entre la arquitectura y lo que cada modelo aprendió a atender, no únicamente la topología en su inicialización."),
+      ...figure(
+        "fig_gradientes.png",
+        "Norma del gradiente respecto de la entrada a lo largo de la ventana temporal, por celda",
+        "Figura 2. Atenuación de la norma del gradiente a lo largo del BPTT para SimpleRNN, LSTM y GRU, en escala logarítmica. La pendiente de la SimpleRNN es visiblemente más pronunciada que la de las celdas con compuertas."
+      ),
 
       h("3.4. Resultados y estabilidad predictiva", HeadingLevel.HEADING_2),
       table(

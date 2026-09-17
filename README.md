@@ -4,7 +4,6 @@
 
 ```
 src/    pipelines de entrenamiento (CNN, RNN, análisis de gradientes, figuras)
-docs/   informes y notas del TP
 tools/  generador del informe .docx (opcional, requiere Node)
 ```
 
@@ -15,11 +14,39 @@ comandos de abajo.
 
 ## Instalación
 
+Requiere **Python 3.9 a 3.12** (probado con 3.12): son las versiones que
+soporta `tensorflow>=2.16` vía pip. Con Python 3.13+ la instalación de
+tensorflow falla.
+
 ```bash
 python -m venv .venv
 # Windows: .venv\Scripts\activate
 # Linux/Mac: source .venv/bin/activate
 pip install -r requirements.txt
+```
+
+## Tiempos estimados
+
+Todo corre en CPU (TensorFlow no tiene soporte nativo de GPU en Windows sin
+WSL2). Referencia tomada en una notebook de gama media-alta; en una compu más
+floja puede tardar bastante más.
+
+| Comando | Duración aprox. |
+|---|---|
+| CNN completa (5 folds, 60 épocas) | ~2 a 2.5 horas |
+| CNN sin regularización (1 fold, 30 épocas) | ~10-15 min |
+| RNN completa (3 celdas, con early stopping) | ~15-20 min |
+| Gradientes + figuras | segundos a un par de minutos |
+
+**Si solo querés verificar que todo corre sin esperar horas**, usá la
+combinación reducida de abajo (CNN de 1 fold + RNN de una sola celda): entrena
+modelos reales de punta a punta y debería quedar bien por debajo de 1 hora
+incluso en hardware modesto. No reproduce los números exactos del informe
+(esos salen de la corrida completa), solo confirma que el pipeline funciona.
+
+```bash
+python src/cnn_pipeline.py --max-folds 1 --epochs 15
+python src/rnn_pipeline.py --cells gru --epochs 15
 ```
 
 ## Módulo CNN — CIFAR-10
@@ -90,8 +117,10 @@ Salidas: `artifacts/gradients/` (normas de gradiente por paso temporal) y
 
 ## Informe .docx (opcional)
 
-Genera un `.docx` con los resultados ya redactados (no lee `artifacts/`, los
-números están embebidos en el script). Requiere Node.js.
+Genera un `.docx` con los resultados ya redactados (el texto y las tablas
+están embebidos en el script) e inserta las figuras de
+`artifacts/figures/fig_curvas_cnn.png` y `fig_gradientes.png` — hace falta
+haber corrido antes `python src/make_figures.py`. Requiere Node.js.
 
 ```bash
 cd tools
@@ -99,11 +128,7 @@ npm install
 npm run build
 ```
 
-## Documentación adicional
-
-En `docs/` están el resumen de resultados (`RESUMEN_RESULTADOS.md`), la guía
-de generación de figuras (`GENERACION_FIGURAS.md`) y las corridas de
-verificación adicionales (`VERIFICACION_RESULTADOS.md`, `INSTRUCCIONES_AGENTE.md`).
+Escribe `tools/informe_tecnico.docx`.
 
 ## Notas
 
