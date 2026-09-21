@@ -3,8 +3,9 @@
 ## Estructura del repo
 
 ```
-src/    pipelines de entrenamiento (CNN, RNN, análisis de gradientes, figuras)
-tools/  generador del informe .docx (opcional, requiere Node)
+src/     pipelines de entrenamiento (CNN, RNN, análisis de gradientes, figuras) y evaluación
+models/  modelos entrenados listos para inferencia (.keras)
+tools/   generador del informe .docx (opcional, requiere Node)
 ```
 
 Los datasets (CIFAR-10, Jena Climate) se descargan solos la primera vez que
@@ -48,6 +49,42 @@ incluso en hardware modesto. No reproduce los números exactos del informe
 python src/cnn_pipeline.py --max-folds 1 --epochs 15
 python src/rnn_pipeline.py --cells gru --epochs 15
 ```
+
+## Modelos exportados
+
+`models/` contiene los modelos finales del informe, versionados junto con el
+código. Cada `.keras` incluye arquitectura y pesos, así que se cargan directo:
+
+| Archivo | Modelo |
+|---|---|
+| `cnn_best.keras` | CNN de CIFAR-10 (mejor pliegue, regularizada) |
+| `rnn_simple_rnn.keras` | SimpleRNN, Jena Climate (ventana 120 h, horizonte 24 h) |
+| `rnn_gru.keras` | GRU, misma configuración |
+| `rnn_lstm.keras` | LSTM, misma configuración |
+
+Inferencia directa:
+
+```python
+from tensorflow import keras
+model = keras.models.load_model("models/cnn_best.keras", compile=False)
+probs = model.predict(images)  # images: (N, 32, 32, 3), valores 0-255
+```
+
+Las RNN esperan ventanas de forma `(N, 120, 18)` normalizadas con la media y el
+desvío del tramo de entrenamiento; `src/rnn_pipeline.py` implementa ese
+preprocesamiento.
+
+Evaluación sobre el conjunto de prueba, sin reentrenar:
+
+```bash
+python src/evaluate.py
+python src/evaluate.py --task cnn
+python src/evaluate.py --task rnn --output eval.json
+```
+
+Reproduce las métricas del informe (CNN: exactitud 0,8634 y F1 macro 0,8627;
+RNN: MAE de prueba 2,3253 / 2,1958 / 2,2461 °C para SimpleRNN / GRU / LSTM,
+contra 2,5079 °C del baseline ingenuo).
 
 ## Módulo CNN — CIFAR-10
 

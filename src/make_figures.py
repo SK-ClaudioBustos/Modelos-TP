@@ -73,7 +73,7 @@ def main():
     plot_learning_curves(
         args.histories, args.histories_plain, outdir / "fig_curvas_cnn.png"
     )
-    print(f"figuras escritas en {outdir}")
+    print(f"figures written to {outdir}")
 
 
 if __name__ == "__main__":

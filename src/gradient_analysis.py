@@ -73,7 +73,7 @@ def main():
         results[name] = summarize(norms)
         print(
             f"[{name}] decay={results[name]['decay_ratio_oldest_over_newest']:.6f} "
-            f"memoria efectiva={results[name]['effective_memory_fraction']:.2%}"
+            f"effective memory={results[name]['effective_memory_fraction']:.2%}"
         )
 
     header = "timestep_from_oldest," + ",".join(curves)
